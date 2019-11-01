@@ -11,7 +11,7 @@ func init() {
 }
 
 func allocPage() (uintptr, error) {
-	data, err := unix.Mmap(-1, 0, int(pageSize), unix.PROT_EXEC|unix.PROT_READ|unix.PROT_WRITE, unix.MAP_ANONYMOUS)
+	data, err := unix.Mmap(-1, 0, int(pageSize), unix.PROT_EXEC|unix.PROT_READ|unix.PROT_WRITE, unix.MAP_PRIVATE|unix.MAP_ANONYMOUS)
 	if err != nil {
 		return 0, err
 	}
@@ -22,7 +22,7 @@ func protectPages(addr, size uintptr) error {
 	start := pageSize * (addr / pageSize)
 	length := pageSize * ((addr + size + pageSize - 1 - start) / pageSize)
 	for i := uintptr(0); i < length; i += pageSize {
-		data := makeSlice(start+1, pageSize)
+		data := makeSlice(start+i, pageSize)
 		err := unix.Mprotect(data, unix.PROT_EXEC|unix.PROT_READ|unix.PROT_WRITE)
 		if err != nil {
 			return err
