@@ -22,9 +22,14 @@ func applyHook(from, to uintptr) (*hook, error) {
 	copy(dst, src)
 	addr := from + uintptr(l)
 	inst := []byte{
-		0x50, 0x50, 0xb8,
-		byte(addr), byte(addr >> 8), byte(addr >> 16), byte(addr >> 24),
-		0x89, 0x44, 0x24, 0x04, 0x58, 0xc3,
+		0x50,                               // PUSH EAX
+		0x50,                               // PUSH EAX
+		0xb8,                               // MOV EAX, addr
+		byte(addr), byte(addr >> 8),        // .
+		byte(addr >> 16), byte(addr >> 24), // .
+		0x89, 0x44, 0x24, 0x04,             // MOV [ESP+4], EAX
+		0x58,                               // POP EAX
+		0xc3,                               // RET
 	}
 	ret := makeSlice(slicePtr(dst)+uintptr(l), uintptr(len(dst)-l))
 	copy(ret, inst)
@@ -33,7 +38,10 @@ func applyHook(from, to uintptr) (*hook, error) {
 	}
 	addr = to
 	inst = []byte{
-		0xb8, byte(addr), byte(addr >> 8), byte(addr >> 16), byte(addr >> 24), 0xff, 0xe0,
+		0xb8,                               // MOV EAX, addr
+		byte(addr), byte(addr >> 8),        // .
+		byte(addr >> 16), byte(addr >> 24), // .
+		0xff, 0xe0,                         // JMP EAX
 	}
 	copy(src, inst)
 	for i := len(inst); i < len(src); i++ {
