@@ -1,21 +1,22 @@
 package hookingo
 
-import "errors"
+// info of one instruction
+type info struct {
+	length      int
+	relocatable bool
+}
 
-var (
-	// ErrRelativeAddr just as its description
-	ErrRelativeAddr = errors.New("relative address in instruction")
-)
-
-func ensureLength(src []byte, size int) (int, error) {
-	var l int
-	for l < size {
-		il, err := analysis(src)
+func ensureLength(src []byte, size int) (info, error) {
+	var inf info
+	inf.relocatable = true
+	for inf.length < size {
+		i, err := analysis(src)
 		if err != nil {
-			return 0, err
+			return inf, err
 		}
-		l += il
-		src = src[il:]
+		inf.relocatable = inf.relocatable && i.relocatable
+		inf.length += i.length
+		src = src[i.length:]
 	}
-	return l, nil
+	return inf, nil
 }

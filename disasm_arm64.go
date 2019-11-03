@@ -4,10 +4,11 @@ import (
 	"golang.org/x/arch/arm64/arm64asm"
 )
 
-func analysis(src []byte) (instLen int, err error) {
+func analysis(src []byte) (inf info, err error) {
 	_, err = arm64asm.Decode(src)
 	if err != nil {
-		return 0, err
+		return
 	}
-	return 4, nil
+	inf.length = 4
+	return
 }

@@ -6,11 +6,11 @@ const (
 
 func applyHook(from, to uintptr) (*hook, error) {
 	src := makeSlice(from, 32)
-	l, err := ensureLength(src, 7)
+	inf, err := ensureLength(src, 7)
 	if err != nil {
 		return nil, err
 	}
-	err = protectPages(from, uintptr(l))
+	err = protectPages(from, uintptr(inf.length))
 	if err != nil {
 		return nil, err
 	}
@@ -18,9 +18,9 @@ func applyHook(from, to uintptr) (*hook, error) {
 	if err != nil {
 		return nil, err
 	}
-	src = makeSlice(from, uintptr(l))
+	src = makeSlice(from, uintptr(inf.length))
 	copy(dst, src)
-	addr := from + uintptr(l)
+	addr := from + uintptr(inf.length)
 	inst := []byte{
 		0x50,                               // PUSH EAX
 		0x50,                               // PUSH EAX
@@ -31,9 +31,9 @@ func applyHook(from, to uintptr) (*hook, error) {
 		0x58,                               // POP EAX
 		0xc3,                               // RET
 	}
-	ret := makeSlice(slicePtr(dst)+uintptr(l), uintptr(len(dst)-l))
+	ret := makeSlice(slicePtr(dst)+uintptr(inf.length), uintptr(len(dst)-inf.length))
 	copy(ret, inst)
-	for i := l + len(inst); i < len(dst); i++ {
+	for i := inf.length + len(inst); i < len(dst); i++ {
 		dst[i] = 0xcc
 	}
 	addr = to
@@ -50,6 +50,9 @@ func applyHook(from, to uintptr) (*hook, error) {
 	hk := &hook{
 		target: src,
 		jumper: dst,
+	}
+	if !inf.relocatable {
+		hk.origin = ErrRelativeAddr
 	}
 	return hk, nil
 }

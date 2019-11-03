@@ -42,9 +42,10 @@ func f4() (string, error) {
 	}
 	s += f2()
 	o := h.Origin()
-	f, ok := o.(func() string)
-	if ok {
+	if f, ok := o.(func() string); ok {
 		s += f()
+	} else if e, ok := o.(error); ok {
+		return "", e
 	}
 	err = h.Restore()
 	if err != nil {

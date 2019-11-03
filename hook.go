@@ -46,6 +46,8 @@ var (
 	ErrDifferentType = errors.New("inputs are of different type")
 	// ErrInputType means inputs are not func type
 	ErrInputType = errors.New("inputs are not func type")
+	// ErrRelativeAddr means cannot call the origin function
+	ErrRelativeAddr = errors.New("relative address in instruction")
 )
 
 func init() {
@@ -77,10 +79,12 @@ func apply(from, to uintptr, typ unsafe.Pointer) (*hook, error) {
 	if err != nil {
 		return nil, err
 	}
-	f := &funcval{fn: slicePtr(h.jumper)}
-	e := (*eface)(unsafe.Pointer(&h.origin))
-	e.data = unsafe.Pointer(f)
-	e.typ = typ
+	if h.origin == nil {
+		f := &funcval{fn: slicePtr(h.jumper)}
+		e := (*eface)(unsafe.Pointer(&h.origin))
+		e.data = unsafe.Pointer(f)
+		e.typ = typ
+	}
 	hooks[from] = h
 	return h, nil
 }

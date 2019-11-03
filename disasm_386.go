@@ -4,17 +4,20 @@ import (
 	"golang.org/x/arch/x86/x86asm"
 )
 
-func analysis(src []byte) (instLen int, err error) {
+func analysis(src []byte) (inf info, err error) {
 	inst, err := x86asm.Decode(src, 32)
 	if err != nil {
-		return 0, err
+		return
 	}
+	inf.length = inst.Len
+	inf.relocatable = true
 	for _, a := range inst.Args {
 		if mem, ok := a.(x86asm.Mem); ok {
 			if mem.Base == x86asm.EIP {
-				return 0, ErrRelativeAddr
+				inf.relocatable = false
+				return
 			}
 		}
 	}
-	return inst.Len, nil
+	return
 }

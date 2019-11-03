@@ -4,10 +4,11 @@ import (
 	"golang.org/x/arch/arm/armasm"
 )
 
-func analysis(src []byte) (instLen int, err error) {
+func analysis(src []byte) (inf info, err error) {
 	inst, err := armasm.Decode(src, armasm.ModeARM)
 	if err != nil {
-		return 0, err
+		return
 	}
-	return inst.Len, nil
+	inf.length = inst.Len
+	return
 }
