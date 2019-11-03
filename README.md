@@ -33,6 +33,8 @@ func main() {
 	say1(s)
 	if f, ok := o.Origin().(func(string)); ok {
 		f(s)
+	} else if e, ok := o.Origin().(error); ok {
+		fmt.Println(e)
 	}
 }
 ```
