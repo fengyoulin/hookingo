@@ -10,7 +10,7 @@ func TestHook(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if s != "f4f2f3f1f2f1" {
+	if s != "f4f2f3f1f2f1f2f3f2f1" {
 		t.Error(s)
 	}
 }
@@ -47,6 +47,10 @@ func f4() (string, error) {
 	} else if e, ok := o.(error); ok {
 		return "", e
 	}
+	e := h.Disable()
+	s += f2()
+	e.Enable()
+	s += f2()
 	err = h.Restore()
 	if err != nil {
 		return "", err

@@ -7,9 +7,15 @@ import (
 	"unsafe"
 )
 
+// Enabler interface
+type Enabler interface {
+	Enable()
+}
+
 // Hook interface
 type Hook interface {
 	Origin() interface{}
+	Disable() Enabler
 	Restore() error
 }
 
@@ -20,6 +26,8 @@ type hook struct {
 	jumper []byte
 	// use to call the origin function
 	origin interface{}
+	// backup the jump to instructions when disabled
+	backup []byte
 }
 
 func (h *hook) Origin() interface{} {
@@ -28,6 +36,19 @@ func (h *hook) Origin() interface{} {
 
 func (h *hook) Restore() error {
 	return remove(slicePtr(h.target))
+}
+
+func (h *hook) Disable() Enabler {
+	disable(h)
+	return &enabler{h:h}
+}
+
+type enabler struct {
+	h *hook
+}
+
+func (e *enabler) Enable() {
+	enable(e.h)
 }
 
 var (
@@ -99,8 +120,22 @@ func remove(from uintptr) error {
 		h.jumper = nil
 		h.target = nil
 		h.origin = nil
+		h.backup = nil
 		delete(hooks, from)
 		return nil
 	}
 	return ErrHookNotFound
+}
+
+func disable(h *hook) {
+	if h.backup == nil {
+		b := make([]byte, len(h.target))
+		copy(b, h.target)
+		h.backup = b
+	}
+	copy(h.target, h.jumper)
+}
+
+func enable(h *hook) {
+	copy(h.target, h.backup)
 }
