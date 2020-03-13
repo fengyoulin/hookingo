@@ -96,16 +96,24 @@ func apply(from, to uintptr, typ unsafe.Pointer) (*hook, error) {
 	if ok {
 		return nil, ErrDoubleHook
 	}
+	// early object allocation
+	// we may hooking runtime.mallocgc
+	// or may be runtime.newobject
+	f := &funcval{}
+	// early bucket allocation
+	hooks[from] = nil
 	h, err := applyHook(from, to)
 	if err != nil {
+		delete(hooks, from) // delete on failure
 		return nil, err
 	}
 	if h.origin == nil {
-		f := &funcval{fn: slicePtr(h.jumper)}
+		f.fn = slicePtr(h.jumper)
 		e := (*eface)(unsafe.Pointer(&h.origin))
 		e.data = unsafe.Pointer(f)
 		e.typ = typ
 	}
+	// just set value here, should not alloc memory
 	hooks[from] = h
 	return h, nil
 }

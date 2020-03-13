@@ -18,6 +18,8 @@ func applyHook(from, to uintptr) (*hook, error) {
 	if err != nil {
 		return nil, err
 	}
+	// early object allocation
+	hk := &hook{}
 	src = makeSlice(from, uintptr(inf.length))
 	copy(dst, src)
 	addr := from + uintptr(inf.length)
@@ -47,10 +49,8 @@ func applyHook(from, to uintptr) (*hook, error) {
 	for i := len(inst); i < len(src); i++ {
 		src[i] = 0xcc
 	}
-	hk := &hook{
-		target: src,
-		jumper: dst,
-	}
+	hk.target = src
+	hk.jumper = dst
 	if !inf.relocatable {
 		hk.origin = ErrRelativeAddr
 	}
