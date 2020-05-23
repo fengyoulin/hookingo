@@ -7,15 +7,25 @@ import (
 	"unsafe"
 )
 
-// Enabler interface
+// Enabler is the interface the wraps the Enable method.
+//
+// Enable enables a hook which disabled by the Disable method of the Hook interface.
 type Enabler interface {
 	Enable()
 }
 
-// Hook interface
+// Hook represents a applied hook, it implements Origin, Disable and Restore. The
+// Disable and Restore methods will change the code in the text segment, so are not
+// concurrent safe, need special attention.
 type Hook interface {
+	// Origin returns the origin function, or a error if the origin function is not
+	// usable after the hook applied.
 	Origin() interface{}
+	// Disable temporarily disables the hook and restores the origin function, the
+	// hook can be enabled later using the returned Enabler.
 	Disable() Enabler
+	// Restore restores the origin function permanently, if you want to enable the
+	// hook again, you should use the Apply function.
 	Restore() error
 }
 
@@ -75,7 +85,8 @@ func init() {
 	hooks = make(map[uintptr]*hook)
 }
 
-// Apply the hook
+// Apply the hook, replace "from" with "to". This function will change the code in
+// the text segment, so is not concurrent safe, need special attention.
 func Apply(from, to interface{}) (Hook, error) {
 	vf := reflect.ValueOf(from)
 	vt := reflect.ValueOf(to)
