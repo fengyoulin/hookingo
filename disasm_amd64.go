@@ -17,6 +17,9 @@ func analysis(src []byte) (inf info, err error) {
 				inf.relocatable = false
 				return
 			}
+		} else if _, ok := a.(x86asm.Rel); ok {
+			inf.relocatable = false
+			return
 		}
 	}
 	return

@@ -52,7 +52,7 @@ func (h *hook) Restore() error {
 
 func (h *hook) Disable() Enabler {
 	disable(h)
-	return &enabler{h:h}
+	return &enabler{h: h}
 }
 
 type enabler struct {

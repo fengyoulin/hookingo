@@ -6,7 +6,7 @@ const (
 
 func applyHook(from, to uintptr) (*hook, error) {
 	src := makeSlice(from, 32)
-	inf, err := ensureLength(src, 12)
+	inf, err := ensureLength(src, 19)
 	if err != nil {
 		return nil, err
 	}
@@ -42,12 +42,16 @@ func applyHook(from, to uintptr) (*hook, error) {
 	}
 	addr = to
 	inst = []byte{
+		0x50,                               // PUSH RAX
+		0x50,                               // PUSH RAX
 		0x48, 0xb8,                         // MOV RAX, addr
 		byte(addr), byte(addr >> 8),        // .
 		byte(addr >> 16), byte(addr >> 24), // .
 		byte(addr >> 32), byte(addr >> 40), // .
 		byte(addr >> 48), byte(addr >> 56), // .
-		0xff, 0xe0,                         // JMP RAX
+		0x48, 0x89, 0x44, 0x24, 0x08,       // MOV [RSP+8], RAX
+		0x58,                               // POP RAX
+		0xc3,                               // RET
 	}
 	copy(src, inst)
 	for i := len(inst); i < len(src); i++ {
