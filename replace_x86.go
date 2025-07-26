@@ -4,14 +4,14 @@
 package hookingo
 
 import (
-	"golang.org/x/arch/x86/x86asm"
 	"unsafe"
+
+	"golang.org/x/arch/x86/x86asm"
 )
 
-func findCall(from, target uintptr, limit int) (addrs []uintptr, err error) {
-	lmt := limit
+func findCall(from, target uintptr, length int) (addrs []uintptr, err error) {
 	var off uintptr
-	for {
+	for length < 0 || off < uintptr(length) {
 		src := makeSlice(from+off, 32)
 		var inst x86asm.Inst
 		inst, err = x86asm.Decode(src, 64)
@@ -23,16 +23,12 @@ func findCall(from, target uintptr, limit int) (addrs []uintptr, err error) {
 				ta := from + off + 5 + uintptr(*(*int32)(unsafe.Pointer(from + off + 1)))
 				if ta == target {
 					addrs = append(addrs, from+off+1)
-					lmt--
 				}
 			}
-		} else if inst.Op == x86asm.RET {
+		} else if length < 0 && inst.Op == x86asm.RET {
 			break
 		}
 		off += uintptr(inst.Len)
-		if lmt == 0 {
-			break
-		}
 	}
 	return
 }

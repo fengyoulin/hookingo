@@ -1,9 +1,9 @@
 package hookingo_test
 
 import (
-	"fmt"
-	"github.com/fengyoulin/hookingo"
 	"testing"
+
+	"github.com/fengyoulin/hookingo"
 )
 
 func TestApply(t *testing.T) {
@@ -17,29 +17,29 @@ func TestApply(t *testing.T) {
 				_ = h.Restore()
 			}
 		}()
-		s := f2()
+		s := f2("f")
 		o := h.Origin()
-		if f, ok := o.(func() string); ok {
-			s += f()
+		if f, ok := o.(func(string) string); ok {
+			s += f("F")
 		} else if e, ok := o.(error); ok {
 			return "", e
 		}
 		e := h.Disable()
-		s += f2()
+		s += f2("f")
 		e.Enable()
-		s += f2()
+		s += f2("F")
 		err = h.Restore()
 		if err != nil {
 			return "", err
 		}
 		h = nil
-		s += f2()
+		s += f2("f")
 		return s, nil
 	}()
 	if err != nil {
 		t.Error(err)
-	} else if s != "f2f3f1f2f1f2f3f2f1" {
-		t.Error(s)
+	} else if x := "ffffFffFFFFff"; s != x {
+		t.Errorf("%s != %s", s, x)
 	}
 }
 
@@ -54,38 +54,35 @@ func TestReplace(t *testing.T) {
 				h.Disable()
 			}
 		}()
-		s := f2()
-		s += f1()
+		s := f2("f")
+		s += f1("F")
 		e := h.Disable()
-		s += f2()
+		s += f2("f")
 		e.Enable()
-		s += f2()
-		e = h.Disable()
+		s += f2("F")
+		_ = h.Disable()
 		h = nil
-		s += f2()
+		s += f2("f")
 		return s, nil
 	}()
 	if err != nil {
 		t.Error(err)
-	} else if s != "f2f3f1f2f1f2f3f2f1" {
-		t.Error(s)
+	} else if x := "ffffFffFFFFff"; s != x {
+		t.Errorf("%s != %s", s, x)
 	}
 }
 
-func f1() string {
-	s := "f1"
-	fmt.Print(s)
+//go:noinline
+func f1(s string) string {
 	return s
 }
 
-func f2() string {
-	s := "f2"
-	fmt.Print(s)
-	return s + f1()
+//go:noinline
+func f2(s string) string {
+	return s + f1(s)
 }
 
-func f3() string {
-	s := "f3"
-	fmt.Print(s)
-	return s
+//go:noinline
+func f3(s string) string {
+	return s + s + s
 }

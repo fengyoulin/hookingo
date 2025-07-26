@@ -8,11 +8,11 @@ import (
 // address in some call instructions. It is not concurrent safe, need special
 // attention.
 type HookCaller interface {
-	// Disable disables the hooks and restores the calls to the original function,
-	// the hook can be enabled later using the returned Enabler.
+	// Disable disables the hooks and restores the calls to the original
+	// function, the hook can be enabled later using the returned Enabler.
 	Disable() Enabler
-	// Count returns the total number of modified call instructions. If the hooks
-	// are disabled, it returns 0.
+	// Count returns the total number of modified call instructions. If the
+	// hooks are disabled, it returns 0.
 	Count() int
 }
 
@@ -45,8 +45,10 @@ func (e *enableCaller) Enable() {
 	e.h.dis = false
 }
 
-// Replace the calls to "old" with "new" in caller, without modify any instructions in "old"
-func Replace(caller, old, new interface{}, limit int) (h HookCaller, err error) {
+// Replace the calls to "old" with "new" in the first "length" bytes of caller,
+// without modify any instruction in "old". When "length" is negative, it will
+// return at the first return instruction in the caller.
+func Replace(caller, old, new interface{}, length int) (h HookCaller, err error) {
 	vf := reflect.ValueOf(old)
 	vt := reflect.ValueOf(new)
 	if vf.Type() != vt.Type() {
@@ -59,7 +61,7 @@ func Replace(caller, old, new interface{}, limit int) (h HookCaller, err error) 
 	if vc.Kind() != reflect.Func {
 		return nil, ErrInputType
 	}
-	as, err := findCall(vc.Pointer(), vf.Pointer(), limit)
+	as, err := findCall(vc.Pointer(), vf.Pointer(), length)
 	if err != nil {
 		return nil, err
 	}

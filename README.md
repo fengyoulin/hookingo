@@ -63,7 +63,7 @@ Hook represents an applied hook, it implements Origin, Disable and Restore. The
 Disable and Restore methods will change the code in the text segment, so are not
 concurrent safe, need special attention.
 
-#### func  Apply
+#### func Apply
 
 ```go
 func Apply(from, to interface{}) (Hook, error)
@@ -81,51 +81,127 @@ import (
 	"github.com/fengyoulin/hookingo"
 )
 
-func say1(n string) {
-	fmt.Printf("Hello, %s!\n", n)
+//go:noinline
+func f1(s string) string {
+	return s
 }
 
-func say2(n string) {
-	fmt.Printf("%s，你好！\n", n)
+//go:noinline
+func f2(s string) string {
+	return s + f1(s)
 }
 
-func disable(s string, h hookingo.Hook) {
-	defer h.Disable().Enable()
-	say1(s)
+//go:noinline
+func f3(s string) string {
+	return s + s + s
 }
 
 func main() {
-	s := "Golang"
-	// replace say1 with say2
-	h, e := hookingo.Apply(say1, say2)
-	if e != nil {
+	h, err := hookingo.Apply(f1, f3)
+	if err != nil {
+		panic(err)
+	}
+	s := f2("f")
+	o := h.Origin()
+	if f, ok := o.(func(string) string); ok {
+		s += f("F")
+	} else if e, ok := o.(error); ok {
 		panic(e)
 	}
-	say1(s) // 1st, hooked
-	if f, ok := h.Origin().(func(string)); ok {
-		f(s) // 2nd, try to call original say1
-	} else if e, ok := h.Origin().(error); ok {
-		panic(e)
+	e := h.Disable()
+	s += f2("f")
+	e.Enable()
+	s += f2("F")
+	err = h.Restore()
+	if err != nil {
+		panic(err)
 	}
-	disable(s, h) // 3rd, temporary disable hook
-	say1(s) // 4th, enabled again
-	// restore say1
-	e = h.Restore()
-	if e != nil {
-		panic(e)
+	s += f2("f")
+	if s != "ffffFffFFFFff" {
+		panic(s)
 	}
-	say1(s) // 5th, restored
 }
 ```
-Build the example with gcflags to prevent inline optimization:
+Use the `//go:noinline` directive or build the example with `-gcflags='-l'` to prevent inline optimization:
 ```shell script
 go build -gcflags '-l'
 ```
-The example should output:
-```shell script
-Golang，你好！
-Hello, Golang!
-Hello, Golang!
-Golang，你好！
-Hello, Golang!
+This example should not panic.
+
+### v0.2.0
+
+Because inline hook modifies instructions at the entrypoint of the target function, it introduces lots of diffculties and limitations. So a new kind of hook was introduced in the new version, which makes things simpler.
+
+#### type HookCaller
+
+```go
+type HookCaller interface {
+	// Disable disables the hooks and restores the calls to the original
+	// function, the hook can be enabled later using the returned Enabler.
+	Disable() Enabler
+	// Count returns the total number of modified call instructions. If the
+	// hooks are disabled, it returns 0.
+	Count() int
+}
 ```
+
+HookCaller applies a group of hooks in the caller, by changing the relative
+address in some call instructions. It is not concurrent safe, need special
+attention.
+
+#### func Replace
+
+```go
+func Replace(caller, old, new interface{}, length int) (h HookCaller, err error)
+```
+Replace the calls to "old" with "new" in the first "length" bytes of caller,
+without modify any instruction in "old". When "length" is negative, it will
+return at the first return instruction in the caller.
+
+### Example
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/fengyoulin/hookingo"
+)
+
+//go:noinline
+func f1(s string) string {
+	return s
+}
+
+//go:noinline
+func f2(s string) string {
+	return s + f1(s)
+}
+
+//go:noinline
+func f3(s string) string {
+	return s + s + s
+}
+
+func main() {
+	h, err := hookingo.Replace(f2, f1, f3, -1)
+	if err != nil {
+		panic(err)
+	}
+	s := f2("f")
+	s += f1("F")
+	e := h.Disable()
+	s += f2("f")
+	e.Enable()
+	s += f2("F")
+	_ = h.Disable()
+	s += f2("f")
+	if s != "ffffFffFFFFff" {
+		panic(s)
+	}
+}
+```
+Use the `//go:noinline` directive or build the example with `-gcflags='-l'` to prevent inline optimization:
+```shell script
+go build -gcflags '-l'
+```
+This example should not panic.
