@@ -128,7 +128,7 @@ go build -gcflags '-l'
 ```
 This example should not panic.
 
-### v0.2.0
+## v0.2.0
 
 Because inline hook modifies instructions at the entrypoint of the target function, it introduces lots of diffculties and limitations. So a new kind of hook was introduced in the new version, which makes things simpler.
 
